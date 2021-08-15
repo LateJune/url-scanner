@@ -3,6 +3,7 @@
 import sys
 import requests
 import urllib3
+from urllib.parse import urlparse
 
 def read_file(file):
     raw_file_contents = []
@@ -29,7 +30,7 @@ def perform_requests(url):
         "Accept": "text/html"
         }
         # Write the response to a variable
-        res = requests.get(url, headers=headers, verify=False)
+        res = requests.get(url, headers=headers, verify=False, timeout=8)
 
         # Get the status code and convert to string
         http_status_code = str(res.status_code)
@@ -39,6 +40,8 @@ def perform_requests(url):
 
     except Exception as e: 
         print(e)
+        result_tuple = (url,"Connection Refused")
+        
 
     return result_tuple
 
@@ -60,50 +63,98 @@ def sort(bubble_sort_list):
     
     return bubble_sort_list
 
-def make_and_write_results(sorted_list):
+def make_and_write_results(sorted_list, out_file):
 
-    out_file = open("output.txt", "w")
     http_code = 2
 
-    while http_code < 6:
-        print("--- " + str(http_code) + "00s ---")
-        print("--- " + str(http_code) + "00s ---", file=out_file)
+    while http_code <= 6:
 
+        for url in sorted_list:
+            if url[1][0] == str(http_code):
+                print("--- " + str(http_code) + "00s ---")
+                print("--- " + str(http_code) + "00s ---", file=out_file)
+                break
+            else: 
+                continue
+        
         for url in sorted_list:
             if url[1][0] == '2' and http_code == 2:
                 print(url[0], url[1])
                 print(url[0], url[1], file=out_file)
+                continue
             elif url[1][0] == '3' and http_code == 3:
                 print(url[0], url[1])
                 print(url[0], url[1], file=out_file)
+                continue
             elif url[1][0] == '4' and http_code == 4:
                 print(url[0], url[1])
                 print(url[0], url[1], file=out_file)
+                continue
             elif url[1][0] == '5' and http_code == 5:
                 print(url[0], url[1])
                 print(url[0], url[1], file=out_file)
-        
-        print('')
-        print('', file=out_file)
-        http_code += 1
+                continue
+            elif url[1] == 'Connection Refused' and http_code == 6:
+                print("--- Errors ---")
+                print(url[0], url[1])
+                print(url[0], url[1], file=out_file)
+                
+                continue
 
-    out_file.close()
+        #print('', file=out_file)
+        http_code += 1
         
     return None
 
 def main():
     # return codes sybolize success (0) or failure (-1/1) 
     try:
-        if len(sys.argv) == 2:
+        if len(sys.argv) == 2:           
             url_list = read_file(sys.argv[1])
             
             unsorted_list = []
             for url in url_list:
                 unsorted_list.append(perform_requests(url))
 
-            print('\n') # include some space between console output
-            make_and_write_results(sort(unsorted_list))
+            list_of_domains = []
+            domain = ''
+            for url_tuple in unsorted_list:
+                urlparse_obj = urlparse(url_tuple[0])
+                domain = urlparse_obj.scheme + "://" + urlparse_obj.netloc
+                list_of_domains.append(domain)
+                print(domain)
+                list_of_domains.append(domain)
 
+            
+            sorted_list = sort(unsorted_list)
+        
+            single_domain_buffer = []
+            already_printed_domains = []
+
+            out_file = open("output.txt", "a")
+
+            for domain in list_of_domains:
+                if domain in already_printed_domains:
+                    continue
+                else:
+                    already_printed_domains.append(domain)
+                
+                    for url_tuple in sorted_list:
+                        if domain in url_tuple[0]:
+                            single_domain_buffer.append(url_tuple)
+                        else:
+                            continue
+
+                print('\n')
+                print('\n', file=out_file)
+                print("======== " + str(domain) + " ========")
+                print("======== " + str(domain) + " ========", file=out_file)
+                make_and_write_results(single_domain_buffer, out_file)
+
+                single_domain_buffer = []
+            
+
+            out_file.close()
             return 0
 
         else:
